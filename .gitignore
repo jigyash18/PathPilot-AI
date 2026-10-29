@@ -1,0 +1,80 @@
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
+
+# local environment and secrets
+.env
+.env.*
+secrets/
+**/secrets/**
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+*.token
+*.credentials
+credentials.json
+
+# local data and database artifacts
+/data/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.dump.*
+*.backup
+*.backup.*
+*.bak
+*.bak.*
+*.sql.gz
+*.sql.zip
+/backup-schema-inspection.sql
+/pnpm-workspace.yaml.backup
+/attached_assets/
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
+.DS_Store
+Thumbs.db
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Replit
+.cache/
+.local/

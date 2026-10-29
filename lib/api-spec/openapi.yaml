@@ -1,0 +1,724 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: goals
+    description: Goal and roadmap operations
+  - name: tasks
+    description: Task progress operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /goals:
+    get:
+      operationId: listGoals
+      tags: [goals]
+      summary: List planning goals
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: "#/components/schemas/CreateGoalInput"
+      responses:
+        "201":
+          description: Created goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+  /goals/task-plan-preview:
+    post:
+      operationId: previewGoalTaskPlan
+      tags: [goals]
+      summary: Generate a temporary task and topic draft
+      description: Returns validated AI or deterministic suggestions without saving a goal or tasks. The user must confirm or edit the draft before submission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalInput"
+      responses:
+        "200":
+          description: Temporary task draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskPlanPreview"
+  /goals/{goalId}/generate-roadmap:
+    post:
+      operationId: generateRoadmap
+      tags: [goals]
+      summary: Generate a roadmap for a goal
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Generated roadmap
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapResponse"
+        "404":
+          description: Goal not found
+  /goals/{goalId}/roadmap:
+    get:
+      operationId: getRoadmap
+      tags: [goals]
+      summary: Get the current roadmap
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Current roadmap
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapResponse"
+        "404":
+          description: Goal not found
+  /goals/{goalId}/replan:
+    post:
+      operationId: replanGoal
+      tags: [goals]
+      summary: Replan incomplete tasks
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Updated roadmap and explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplanResponse"
+  /goals/{goalId}/preview-alternatives:
+    post:
+      operationId: previewAlternativePlans
+      tags: [goals]
+      summary: Preview alternative schedule constraints without saving changes
+      description: Evaluates current constraints, a 1-hour daily increase capped at 8 hours/day, and a 14-day deadline extension. Preview does not modify saved data.
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Temporary schedule comparison
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlternativePlanPreview"
+        "404":
+          description: Goal not found
+  /goals/{goalId}/progress:
+    get:
+      operationId: getGoalProgress
+      tags: [goals]
+      summary: Get goal progress
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+  /goals/{goalId}/progress-dashboard:
+    get:
+      operationId: getProgressDashboard
+      tags: [goals]
+      summary: Get weekly, topic, milestone, and plan history progress
+      description: Weekly periods use UTC Monday through Sunday. Study duration is not recorded, so actual study hours are unavailable.
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Progress dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressDashboard"
+        "404":
+          description: Goal not found
+  /goals/{goalId}/milestones:
+    post:
+      operationId: confirmMilestone
+      tags: [goals]
+      summary: Confirm or edit a suggested milestone
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MilestoneConfirmationInput"
+      responses:
+        "201":
+          description: Confirmed milestone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmedMilestone"
+        "400":
+          description: Invalid milestone or task association
+        "404":
+          description: Goal not found
+  /goals/{goalId}/recommendations:
+    get:
+      operationId: getGoalRecommendations
+      tags: [goals]
+      summary: Get recommended tasks
+      parameters:
+        - $ref: "#/components/parameters/GoalId"
+      responses:
+        "200":
+          description: Recommended tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recommendation"
+  /tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Mark a task complete
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Completed task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+  /tasks/{taskId}/miss:
+    post:
+      operationId: missTask
+      tags: [tasks]
+      summary: Mark a task missed
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Missed task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+components:
+  parameters:
+    GoalId:
+      name: goalId
+      in: path
+      required: true
+      schema:
+        type: integer
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Goal:
+      type: object
+      required:
+        - id
+        - goalName
+        - goalType
+        - deadline
+        - dailyHours
+        - priority
+        - description
+        - skills
+        - overallProgress
+        - taskCount
+        - completedCount
+        - missedCount
+      properties:
+        id:
+          type: integer
+        goalName:
+          type: string
+        goalType:
+          type: string
+        deadline:
+          type: string
+          format: date
+        dailyHours:
+          type: number
+        priority:
+          type: string
+        description:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        overallProgress:
+          type: number
+        taskCount:
+          type: integer
+        completedCount:
+          type: integer
+        missedCount:
+          type: integer
+        taskGenerationStatus:
+          type: string
+          enum:
+            - ai_generated
+            - user_confirmed
+            - fallback_missing_credentials
+            - fallback_provider_error
+            - fallback_invalid_output
+        taskGenerationMessage:
+          type: string
+    GoalInput:
+      type: object
+      required:
+        - goalName
+        - goalType
+        - deadline
+        - dailyHours
+        - priority
+        - description
+        - skills
+      properties:
+        goalName:
+          type: string
+          minLength: 1
+        goalType:
+          type: string
+          minLength: 1
+        deadline:
+          type: string
+          format: date
+        dailyHours:
+          type: number
+          minimum: 0.5
+          maximum: 24
+        priority:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        skills:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 80
+        confirmedTasks:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ConfirmedTaskInput"
+    CreateGoalInput:
+      type: object
+      required: [goalName, goalType, deadline, dailyHours, priority, description, skills, confirmedTasks]
+      properties:
+        goalName: { type: string, minLength: 1 }
+        goalType: { type: string, minLength: 1 }
+        deadline: { type: string, format: date }
+        dailyHours: { type: number, minimum: 0.5, maximum: 24 }
+        priority: { type: string, minLength: 1 }
+        description: { type: string }
+        skills:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 80 }
+        confirmedTasks:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: "#/components/schemas/ConfirmedTaskInput" }
+    ConfirmedTaskInput:
+      type: object
+      required: [taskName, topic, durationHours, priority, difficulty, dependsOn]
+      properties:
+        taskName: { type: string, minLength: 3, maxLength: 100 }
+        topic: { type: string, minLength: 1, maxLength: 80 }
+        durationHours: { type: number, minimum: 0.5, maximum: 100 }
+        priority: { type: string, enum: [high, medium, low] }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        dependsOn:
+          type: array
+          maxItems: 20
+          items: { type: integer, minimum: 0 }
+    TaskPlanPreview:
+      type: object
+      required: [tasks, status, message]
+      properties:
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/ConfirmedTaskInput" }
+        status:
+          type: string
+          enum: [ai_generated, fallback_missing_credentials, fallback_provider_error, fallback_invalid_output]
+        message: { type: string }
+    Task:
+      type: object
+      required:
+        - id
+        - goalId
+        - taskName
+        - topic
+        - durationHours
+        - priority
+        - difficulty
+        - status
+        - scheduledDate
+        - dependencyNames
+        - completionPercent
+        - completedAt
+      properties:
+        id:
+          type: integer
+        goalId:
+          type: integer
+        taskName:
+          type: string
+        topic:
+          type: string
+        durationHours:
+          type: number
+        priority:
+          type: string
+        difficulty:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, missed]
+        scheduledDate:
+          type: string
+          format: date
+          nullable: true
+        dependencyNames:
+          type: array
+          items:
+            type: string
+        completionPercent:
+          type: number
+        completedAt:
+          type: string
+          format: date
+          nullable: true
+    RoadmapResponse:
+      type: object
+      required:
+        - goal
+        - tasks
+        - generatedAt
+        - isFeasible
+        - unscheduledTaskNames
+        - infeasibilityExplanation
+      properties:
+        goal:
+          $ref: "#/components/schemas/Goal"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        generatedAt:
+          type: string
+          format: date-time
+        isFeasible:
+          type: boolean
+        unscheduledTaskNames:
+          type: array
+          items:
+            type: string
+        infeasibilityExplanation:
+          type: string
+          nullable: true
+    ReplanResponse:
+      type: object
+      required:
+        - goal
+        - tasks
+        - changedTaskNames
+        - missedTaskName
+        - explanation
+        - previousTasks
+        - isFeasible
+        - unscheduledTaskNames
+        - infeasibilityExplanation
+        - changes
+      properties:
+        goal:
+          $ref: "#/components/schemas/Goal"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        changedTaskNames:
+          type: array
+          items:
+            type: string
+        missedTaskName:
+          type: string
+        explanation:
+          type: string
+        previousTasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        isFeasible:
+          type: boolean
+        unscheduledTaskNames:
+          type: array
+          items:
+            type: string
+        infeasibilityExplanation:
+          type: string
+          nullable: true
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReplanTaskChange"
+    ReplanTaskChange:
+      type: object
+      required: [taskId, taskName, change, reasonCode, previousDate, scheduledDate]
+      properties:
+        taskId: { type: integer }
+        taskName: { type: string }
+        change:
+          type: string
+          enum: [unchanged, moved, recovered, newly_unscheduled, newly_scheduled]
+        reasonCode: { type: string }
+        previousDate: { type: string, nullable: true }
+        scheduledDate: { type: string, nullable: true }
+    AlternativePlanPreview:
+      type: object
+      required: [rankingMethod, hasFeasibleAlternative, plans]
+      properties:
+        rankingMethod: { type: string }
+        hasFeasibleAlternative: { type: boolean }
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlternativePlan"
+    AlternativePlan:
+      type: object
+      required: [scenario, feasible, dailyHours, deadline, deadlineExtensionDays, totalWorkloadHours, scheduledTasks, unscheduledTasks, dailyWorkload, changes, infeasibilityExplanation, rank]
+      properties:
+        scenario:
+          type: string
+          enum: [current, more_daily_time, extended_deadline]
+        feasible: { type: boolean }
+        dailyHours: { type: number }
+        deadline: { type: string, format: date }
+        deadlineExtensionDays: { type: integer }
+        totalWorkloadHours: { type: number }
+        scheduledTasks:
+          type: array
+          items: { $ref: "#/components/schemas/AlternativePlanTask" }
+        unscheduledTasks:
+          type: array
+          items: { $ref: "#/components/schemas/AlternativePlanTask" }
+        dailyWorkload:
+          type: array
+          items:
+            type: object
+            required: [date, hours]
+            properties:
+              date: { type: string, format: date }
+              hours: { type: number }
+        changes:
+          type: array
+          items: { $ref: "#/components/schemas/ReplanTaskChange" }
+        infeasibilityExplanation: { type: string, nullable: true }
+        rank: { type: integer, nullable: true }
+    AlternativePlanTask:
+      type: object
+      required: [taskId, taskName, durationHours, scheduledDate, reasonCode]
+      properties:
+        taskId: { type: integer }
+        taskName: { type: string }
+        durationHours: { type: number }
+        scheduledDate: { type: string, format: date, nullable: true }
+        reasonCode: { type: string }
+    ProgressSummary:
+      type: object
+      required:
+        - overallProgress
+        - completed
+        - pending
+        - missed
+        - totalHours
+        - completedHours
+      properties:
+        overallProgress:
+          type: number
+        completed:
+          type: integer
+        pending:
+          type: integer
+        missed:
+          type: integer
+        totalHours:
+          type: number
+        completedHours:
+          type: number
+          description: Estimated duration of tasks whose current status is completed; actual study duration is not recorded.
+    ProgressDashboard:
+      type: object
+      required: [timeZone, weekStartsOn, weeks, topics, milestones, timeline, historyStartsAt]
+      properties:
+        timeZone: { type: string, enum: [UTC] }
+        weekStartsOn: { type: string, enum: [Monday] }
+        weeks:
+          type: array
+          items: { $ref: "#/components/schemas/WeeklyProgress" }
+        topics:
+          type: array
+          items: { $ref: "#/components/schemas/TopicProgress" }
+        milestones:
+          type: array
+          items: { $ref: "#/components/schemas/DashboardMilestone" }
+        timeline:
+          type: array
+          items: { $ref: "#/components/schemas/PlanTimelineVersion" }
+        historyStartsAt: { type: string, format: date-time, nullable: true }
+    WeeklyProgress:
+      type: object
+      required: [weekStart, weekEnd, completedTasks, missedTasks, completionPercent, plannedTaskCount, plannedHours, actualStudyHours, hasProgressHistory, hasPlanHistory]
+      properties:
+        weekStart: { type: string, format: date }
+        weekEnd: { type: string, format: date }
+        completedTasks: { type: integer }
+        missedTasks: { type: integer }
+        completionPercent: { type: integer, nullable: true }
+        plannedTaskCount: { type: integer, nullable: true }
+        plannedHours: { type: number, nullable: true, description: Estimated hours from the plan snapshot, not actual study time. }
+        actualStudyHours: { type: number, nullable: true }
+        hasProgressHistory: { type: boolean }
+        hasPlanHistory: { type: boolean }
+    TopicProgress:
+      type: object
+      required: [topic, taskCount, completedTasks, missedTasks, completionPercent]
+      properties:
+        topic: { type: string }
+        taskCount: { type: integer }
+        completedTasks: { type: integer }
+        missedTasks: { type: integer }
+        completionPercent: { type: integer }
+    DashboardMilestone:
+      type: object
+      required: [key, id, title, targetDate, taskIds, confirmed, completed, completedTaskCount, taskCount]
+      properties:
+        key: { type: string }
+        id: { type: integer, nullable: true }
+        title: { type: string }
+        targetDate: { type: string, format: date, nullable: true }
+        taskIds:
+          type: array
+          items: { type: integer }
+        confirmed: { type: boolean }
+        completed: { type: boolean }
+        completedTaskCount: { type: integer }
+        taskCount: { type: integer }
+    PlanTimelineVersion:
+      type: object
+      required: [planVersionId, version, createdAt, tasks]
+      properties:
+        planVersionId: { type: integer }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/PlanTimelineTask" }
+    PlanTimelineTask:
+      type: object
+      required: [taskId, taskName, topic, plannedDate, estimatedHours, completedDate, completionRecordAvailable]
+      properties:
+        taskId: { type: integer }
+        taskName: { type: string }
+        topic: { type: string }
+        plannedDate: { type: string, format: date, nullable: true }
+        estimatedHours: { type: number, nullable: true, description: Estimated task duration, not actual study time. }
+        completedDate: { type: string, format: date, nullable: true }
+        completionRecordAvailable: { type: boolean, description: False means no historical completion record is available; it does not prove the task was never completed. }
+    MilestoneConfirmationInput:
+      type: object
+      required: [title, targetDate, taskIds]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 100 }
+        targetDate: { type: string, format: date, nullable: true }
+        taskIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: integer }
+    ConfirmedMilestone:
+      type: object
+      required: [id, title, targetDate, taskIds, confirmed, completed, completedTaskCount, taskCount, completionRule]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        targetDate: { type: string, format: date, nullable: true }
+        taskIds:
+          type: array
+          items: { type: integer }
+        confirmed: { type: boolean }
+        completed: { type: boolean }
+        completedTaskCount: { type: integer }
+        taskCount: { type: integer }
+        completionRule: { type: string }
+    Recommendation:
+      type: object
+      required:
+        - task
+        - reason
+        - score
+      properties:
+        task:
+          $ref: "#/components/schemas/Task"
+        reason:
+          type: string
+        score:
+          type: integer
+

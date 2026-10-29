@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "PathPilot AI"
+description = "A focused student productivity dashboard that turns long-term goals into adaptive roadmaps, tracks progress, detects missed work, and explains schedule changes."
+version = "1.0.0"
+id = "artifacts/pathpilot-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23789
+
+[services.development]
+run = "pnpm --filter @workspace/pathpilot-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pathpilot-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pathpilot-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23789"
+BASE_PATH = "/"
