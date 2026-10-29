@@ -2,6 +2,7 @@ services:
   - type: web
     name: pathpilot-ai-ndl-api
     runtime: node
+    plan: free
     buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm run typecheck && corepack pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
