@@ -26,7 +26,7 @@ BEGIN
       ('pathpilot_plan_version_tasks')
     ) AS expected(table_name)
     JOIN pg_class relation_row
-      ON relation_row.relnamespace = 'public'::regnamespace
+      ON relation_row.relnamespace = to_regnamespace('public')
      AND relation_row.relname = expected.table_name
     WHERE relation_row.relkind NOT IN ('r', 'p')
   ) THEN
@@ -165,7 +165,7 @@ BEGIN
   IF present_table_count = expected_table_count AND NOT EXISTS (
     SELECT 1
     FROM pg_constraint constraint_row
-    WHERE constraint_row.conrelid = 'public.pathpilot_dependencies'::regclass
+    WHERE constraint_row.conrelid = to_regclass('public.pathpilot_dependencies')
       AND constraint_row.conname = 'pathpilot_dependency_not_self_ck'
       AND constraint_row.contype = 'c'
       AND pg_get_constraintdef(constraint_row.oid) LIKE '%task_id <> depends_on%'
@@ -185,7 +185,7 @@ BEGIN
       ('pathpilot_plan_version_task_uq', 'pathpilot_plan_version_tasks', true, '(plan_version_id, task_id)')
     ) AS expected(index_name, table_name, is_unique, key_definition)
     JOIN pg_class index_row
-      ON index_row.relnamespace = 'public'::regnamespace
+      ON index_row.relnamespace = to_regnamespace('public')
      AND index_row.relname = expected.index_name
     LEFT JOIN pg_index index_definition ON index_definition.indexrelid = index_row.oid
     WHERE index_row.relkind <> 'i'
