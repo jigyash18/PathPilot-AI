@@ -2,6 +2,8 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { eq, lt } from "drizzle-orm";
 import type { Request, RequestHandler, Response } from "express";
 import { db, sessionsTable, usersTable } from "@workspace/db";
+import { logger } from "./logger";
+import { safeErrorDiagnostics } from "./safe-error-logging";
 
 export const SESSION_COOKIE = "pathpilot_session";
 export const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
@@ -159,7 +161,8 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     }
     req.auth = user;
     next();
-  } catch {
+  } catch (error) {
+    logger.error({ operation: "session_authentication", error: safeErrorDiagnostics(error) }, "Authentication operation failed");
     res.status(500).json({ error: "Could not verify the current session." });
   }
 };

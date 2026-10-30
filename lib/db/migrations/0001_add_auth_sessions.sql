@@ -1,14 +1,16 @@
--- Prepared for review only. Do not execute automatically.
+-- Applied by the focused Render auth migration runner after a successful build.
+-- Run only with DATABASE_URL set to the intended application database.
 --
 -- This migration is intentionally fail-closed around pre-existing objects:
 -- existing nullable credential columns and a correctly shaped session table or
 -- index are accepted; same-named incompatible objects raise an error instead
--- of being silently reused.
+-- of being silently reused. The existing public.pathpilot_users core table is
+-- required; this migration never replaces or deletes its rows.
 
 BEGIN;
 
-ALTER TABLE pathpilot_users ADD COLUMN IF NOT EXISTS email text;
-ALTER TABLE pathpilot_users ADD COLUMN IF NOT EXISTS password_hash text;
+ALTER TABLE public.pathpilot_users ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.pathpilot_users ADD COLUMN IF NOT EXISTS password_hash text;
 
 DO $$
 BEGIN
@@ -53,12 +55,12 @@ END
 $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS pathpilot_users_email_uq
-  ON pathpilot_users USING btree (lower(email))
+  ON public.pathpilot_users USING btree (lower(email))
   WHERE email IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS pathpilot_sessions (
+CREATE TABLE IF NOT EXISTS public.pathpilot_sessions (
   id serial PRIMARY KEY,
-  user_id integer NOT NULL REFERENCES pathpilot_users(id),
+  user_id integer NOT NULL REFERENCES public.pathpilot_users(id),
   token_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   remember_me boolean NOT NULL DEFAULT false,
@@ -167,12 +169,12 @@ END
 $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS pathpilot_sessions_token_hash_uq
-  ON pathpilot_sessions USING btree (token_hash);
+  ON public.pathpilot_sessions USING btree (token_hash);
 
 CREATE INDEX IF NOT EXISTS pathpilot_sessions_user_idx
-  ON pathpilot_sessions USING btree (user_id);
+  ON public.pathpilot_sessions USING btree (user_id);
 
 CREATE INDEX IF NOT EXISTS pathpilot_sessions_expiry_idx
-  ON pathpilot_sessions USING btree (expires_at);
+  ON public.pathpilot_sessions USING btree (expires_at);
 
 COMMIT;

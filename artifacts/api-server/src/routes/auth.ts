@@ -3,26 +3,14 @@ import { Router, type IRouter } from "express";
 import { db, sessionsTable, usersTable } from "@workspace/db";
 import { buildSessionRecord, clearSessionCookie, createSession, getSessionUser, hashPassword, isValidEmail, isValidPassword, normalizeEmail, revokeSession, setSessionCookie, verifyPassword } from "../lib/auth";
 import { logger } from "../lib/logger";
+import { safeErrorDiagnostics } from "../lib/safe-error-logging";
 
 const router: IRouter = Router();
 
 class DuplicateEmailError extends Error {}
 
 function logAuthFailure(operation: string, error: unknown): void {
-  if (error instanceof Error) {
-    const databaseError = error as Error & { code?: unknown };
-    const safeMessage = error.message.split("\nparams:", 1)[0];
-    logger.error({
-      operation,
-      error: {
-        name: error.name,
-        message: safeMessage,
-        ...(typeof databaseError.code === "string" ? { code: databaseError.code } : {}),
-      },
-    }, "Authentication operation failed");
-    return;
-  }
-  logger.error({ operation, errorType: typeof error }, "Authentication operation failed");
+  logger.error({ operation, error: safeErrorDiagnostics(error) }, "Authentication operation failed");
 }
 
 router.get("/auth/session", async (req, res): Promise<void> => {
