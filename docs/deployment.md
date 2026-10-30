@@ -101,41 +101,37 @@ user data belongs in the provisioned PostgreSQL database, not GitHub.
 ## Database changes
 
 The SQL files in `lib/db/migrations/` are reviewed migration scripts; there is
-no Drizzle migration journal. The Render API build command runs the focused,
-repeatable `0001_add_auth_sessions.sql` migration after install, typecheck, and
-API build succeed. The migration is transactional, adds only nullable auth
-columns/session storage and indexes to the existing core schema, validates
-existing definitions, and fails closed on incompatible objects. A migration
-failure fails the build and prevents that deploy from proceeding. The runner
-uses a PostgreSQL advisory lock and logs only a safe SQLSTATE on failure.
+no Drizzle migration journal. After install, typecheck, and API build succeed,
+the Render API build command runs `migrate:production`. Its runner holds a
+PostgreSQL advisory lock and applies `0000_baseline_core.sql` before
+`0001_add_auth_sessions.sql`.
 
-This auth deployment step does not run `0002_add_study_sessions.sql`; that
-Analytics migration remains a separate operator-reviewed schema change. The
-`@workspace/db` `push` command performs schema push; `push-force` is especially
-unsuitable for unattended production deployment. Neither is used by the
-deployment build.
+Migration 0000 creates the nine core tables from the checked-in Drizzle schema
+on an empty database. On a database where those tables already exist, it
+validates their expected columns, foreign keys, dependency check, and named
+indexes before continuing. A partial or incompatible core schema aborts before
+baseline DDL; the transaction also rolls back any failed migration. It does
+not drop, truncate, replace, or reinsert rows. Migration 0001 then adds nullable
+authentication columns, the case-insensitive email index, and session storage.
+A migration failure fails the build and prevents that deploy from proceeding.
+The runner logs sanitized migration diagnostics without connection details.
 
-These two SQL files cover authentication/session additions and study-session
-storage; they assume the core `pathpilot_users`, `pathpilot_goals`, and other
-application tables already exist. They are not a baseline initializer for a
-new empty database. Before provisioning a fresh production database, prepare
-and review a baseline migration from the checked-in Drizzle schema; do not
-substitute an unattended `push` for that review.
+Migration 0002 adds Study Analytics storage and is not part of
+`migrate:production`; it remains an operator-reviewed schema change. Do not
+add it to the automatic deployment step without separate review/approval.
 
-Before deploying the auth migration, provision the intended production
-database, verify a restorable backup, and inspect its current schema
-read-only. The migration expects the existing core `pathpilot_users` table.
-Render must make `DATABASE_URL` available to the API build environment; store
-it as a secret and never put it in source control. The focused runner applies
-only auth migration 0001. It is safe to rerun because that migration checks
-existing objects and only adds the missing auth pieces. Do not add the study
-Analytics migration to this automatic step without a separate review/approval.
+Before deploying, provision the intended production database, verify a
+restorable backup, and inspect its current schema read-only. Render must make
+`DATABASE_URL` available to the API build environment; store it as a secret
+and never put it in source control. The production runner applies 0000 and 0001
+in order, and both are safe to rerun against a complete compatible schema.
 
 For a manually approved migration outside Render, the SQL remains runnable
 with a `psql` client and `DATABASE_URL` supplied by the secret store:
 
 ```sh
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f lib/db/migrations/0001_add_auth_sessions.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f lib/db/migrations/0000_baseline_core.sql && \
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f lib/db/migrations/0001_add_auth_sessions.sql
 ```
 
 Migration 0002 is not part of this signin repair; apply it separately only
@@ -149,6 +145,6 @@ plan and backup.
 ## Post-merge behavior
 
 The Replit post-merge hook installs locked dependencies but never changes the
-database schema. Render applies only the reviewed auth migration through the
-API build step above; other production migrations continue to require their
-separate reviewed procedure.
+database schema. Render applies only the reviewed core baseline and auth
+migrations through the API build step above; other production migrations
+continue to require their separate reviewed procedure.
